@@ -1,63 +1,71 @@
-resource "aws_vpc" "Wk23" {
+resource "aws_vpc" "Wk22" {
   cidr_block       = "10.0.0.0/16"
   instance_tenancy = "default"
 
   tags = {
-    Name = "Wk23"
+    Name = "Wk22"
   }
 }
 variable "public_subnet_cidrs" {
- type        = list(string)
- description = "Public Subnet CIDR values"
- default     = ["10.0.1.0/24", "10.0.2.0/24"]
+  type        = list(string)
+  description = "Public Subnet CIDR values"
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
 }
- 
+
 variable "private_subnet_cidrs" {
- type        = list(string)
- description = "Private Subnet CIDR values"
- default     = ["10.0.3.0/24", "10.0.4.0/24"]
+  type        = list(string)
+  description = "Private Subnet CIDR values"
+  default     = ["10.0.3.0/24", "10.0.4.0/24"]
 }
 
 variable "azs" {
- type        = list(string)
- description = "Availability Zones"
- default     = ["us-east-1a", "us-east-1b"]
+  type        = list(string)
+  description = "Availability Zones"
+  default     = ["us-east-1a", "us-east-1b"]
 }
 
 resource "aws_subnet" "public_subnets" {
- count      = length(var.public_subnet_cidrs)
- vpc_id     = aws_vpc.Wk23.id
- cidr_block = element(var.public_subnet_cidrs, count.index)
- availability_zone = element(var.azs, count.index)
- 
+  count             = length(var.public_subnet_cidrs)
+  vpc_id            = aws_vpc.Wk22.id
+  cidr_block        = element(var.public_subnet_cidrs, count.index)
+  availability_zone = element(var.azs, count.index)
+
 }
 
 resource "aws_subnet" "private_subnets" {
- count      = length(var.private_subnet_cidrs)
- vpc_id     = aws_vpc.Wk23.id
- cidr_block = element(var.private_subnet_cidrs, count.index) 
- availability_zone = element(var.azs, count.index)
- }
- 
+  count             = length(var.private_subnet_cidrs)
+  vpc_id            = aws_vpc.Wk22.id
+  cidr_block        = element(var.private_subnet_cidrs, count.index)
+  availability_zone = element(var.azs, count.index)
+}
+
 resource "aws_internet_gateway" "gw" {
- vpc_id = aws_vpc.Wk23.id
+  vpc_id = aws_vpc.Wk22.id
 }
 
 resource "aws_route_table" "second_rt" {
- vpc_id = aws_vpc.Wk23.id
- 
- route {
-   cidr_block = "0.0.0.0/0"
-   gateway_id = aws_internet_gateway.gw.id
- }
- 
- tags = {
-   Name = "2nd Route Table"
- }
+  vpc_id = aws_vpc.Wk22.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+
+  tags = {
+    Name = "2nd Route Table"
+  }
 }
 
 resource "aws_route_table_association" "public_subnet_asso" {
- count = length(var.public_subnet_cidrs)
- subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
- route_table_id = aws_route_table.second_rt.id
+  count          = length(var.public_subnet_cidrs)
+  subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
+  route_table_id = aws_route_table.second_rt.id
 }
+
+module "ec2_instance" {
+  source                 = "./terra-sub"
+  ami                    = "ami-03a8df9ab831d7c53"
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = ["sg-0a58d687707f9be73"]
+}
+
